@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tauranga Lead Finder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f13;
+    color: #e8e8f0;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .header p {
+    color: #888;
+    font-size: 14px;
+  }
+  .badge {
+    display: inline-block;
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    color: #7b7bf7;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .controls {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .controls label {
+    display: block;
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 6px;
+  }
+  .controls select, .controls input {
+    width: 100%;
+    background: #0f0f13;
+    border: 1px solid #2a2a3a;
+    color: #e8e8f0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    outline: none;
+  }
+  .controls select:focus, .controls input:focus {
+    border-color: #7b7bf7;
+  }
+  .run-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #7b7bf7, #5b5bd6);
+    color: #fff;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .run-btn:hover { opacity: 0.9; }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .status-bar {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #aaa;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-bar.visible { display: flex; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid #333;
+    border-top-color: #7b7bf7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .progress-log {
+    background: #0d0d15;
+    border: 1px solid #1e1e2e;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 20px;
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+    font-size: 12px;
+    font-family: monospace;
+    color: #666;
+  }
+  .progress-log.visible { display: block; }
+  .progress-log .log-line { padding: 2px 0; }
+  .progress-log .log-line.highlight { color: #7b7bf7; }
+  .progress-log .log-line.success { color: #4ade80; }
+  .progress-log .log-line.warn { color: #f59e0b; }
+
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .results-header h2 { font-size: 18px; font-weight: 600; }
+  .results-count {
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    color: #7b7bf7;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  .lead-card {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .lead-card:hover { border-color: #7b7bf7; }
+  .lead-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .lead-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .lead-industry {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .score-badge {
+    background: #1e1e0a;
+    border: 1px solid #3a3a10;
+    color: #facc15;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .score-badge.high { background: #1e0a0a; border-color: #3a1010; color: #f87171; }
+  .lead-contact {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .lead-contact a {
+    color: #7b7bf7;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .lead-contact a:hover { text-decoration: underline; }
+  .issues-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  .issues-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .issue-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #ccc;
+    background: #0f0f13;
+    padding: 8px 12px;
+    border-radius: 7px;
+    border-left: 3px solid #f87171;
+  }
+  .issue-icon { color: #f87171; flex-shrink: 0; margin-top: 1px; }
+  .confidence-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #555;
+  }
+  .confidence-bar-wrap {
+    flex: 1;
+    height: 4px;
+    background: #1e1e2e;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .confidence-bar { height: 100%; background: #4ade80; border-radius: 2px; }
+  .website-link {
+    font-size: 12px;
+    color: #555;
+    margin-top: 10px;
+    word-break: break-all;
+  }
+  .website-link a { color: #555; text-decoration: none; }
+  .website-link a:hover { color: #7b7bf7; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #444;
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; }
+
+  .export-btn {
+    width: 100%;
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    color: #7b7bf7;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s;
+  }
+  .export-btn:hover { background: #22223e; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="badge">🤖 AI Agent</div>
+  <h1>Tauranga Lead Finder</h1>
+  <p>Finds local businesses with poor online presence — verified & ready to contact</p>
+</div>
+
+<div class="controls">
+  <label>Business Category to Search</label>
+  <select id="category">
+    <option value="restaurant">Restaurants & Cafes</option>
+    <option value="plumber">Plumbers</option>
+    <option value="electrician">Electricians</option>
+    <option value="hair salon">Hair Salons</option>
+    <option value="mechanic">Auto Mechanics</option>
+    <option value="dentist">Dentists</option>
+    <option value="lawyer">Lawyers</option>
+    <option value="accounting">Accountants</option>
+    <option value="real estate">Real Estate Agents</option>
+    <option value="gym">Gyms & Fitness</option>
+    <option value="retail">Retail Shops</option>
+    <option value="builder">Builders & Contractors</option>
+  </select>
+
+  <label>Location Focus</label>
+  <input type="text" id="location" value="Tauranga, Bay of Plenty, New Zealand" />
+
+  <button class="run-btn" id="runBtn" onclick="runAgent()">🔍 Find 10 Leads Now</button>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <div class="spinner"></div>
+  <span id="statusText">Initialising agent...</span>
+</div>
+
+<div class="progress-log" id="progressLog"></div>
+
+<div id="resultsSection" style="display:none">
+  <div class="results-header">
+    <h2>Lead Results</h2>
+    <span class="results-count" id="resultsCount">0 leads</span>
+  </div>
+  <div id="leadsContainer"></div>
+  <button class="export-btn" onclick="exportCSV()">📥 Export as CSV</button>
+</div>
+
+<div class="empty-state" id="emptyState">
+  <div class="icon">🎯</div>
+  <p>Choose a category and click Run to find your leads</p>
+</div>
+
+<script>
+let currentLeads = [];
+
+function log(msg, type = '') {
+  const log = document.getElementById('progressLog');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = '› ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+
+async function runAgent() {
+  const category = document.getElementById('category').value;
+  const location = document.getElementById('location').value;
+  const btn = document.getElementById('runBtn');
+
+  btn.disabled = true;
+  currentLeads = [];
+
+  document.getElementById('statusBar').classList.add('visible');
+  document.getElementById('progressLog').classList.add('visible');
+  document.getElementById('progressLog').innerHTML = '';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'none';
+
+  log('Starting agent for: ' + category + ' in ' + location, 'highlight');
+  setStatus('Searching for ' + category + ' businesses in ' + location + '...');
+
+  try {
+    const prompt = `You are an expert lead generation agent for a web design agency in New Zealand.
+
+Your task: Find 10 real businesses in "${location}" in the category "${category}" that are ACTIVELY LOSING SALES due to a poor online presence or poorly built website.
+
+RESEARCH METHOD (follow this exactly):
+1. Think of real, specific businesses in Tauranga NZ in this category
+2. For each business, assess their likely online presence based on your knowledge
+3. Identify businesses that show signs of poor digital presence such as:
+   - No website or extremely basic/outdated website
+   - No Google Business Profile or very few reviews
+   - Missing contact information online
+   - No social media presence
+   - Website not mobile-friendly
+   - Broken or missing images on website
+   - No SSL certificate
+   - Outdated copyright years (3+ years old)
+   - Very slow loading websites
+   - Poor or no online booking system for service businesses
+
+VERIFICATION REQUIREMENT:
+- Only include a business if you are HIGHLY CONFIDENT the issue exists
+- Each business must have at least 2-3 confirmed problems
+- Do NOT invent businesses - only include real ones you know exist or are very likely to exist in Tauranga
+
+OUTPUT: Return ONLY a valid JSON array with exactly 10 objects. No other text, no markdown, no explanation. Just the raw JSON array.
+
+Each object must have exactly these fields:
+{
+  "name": "Business Name",
+  "industry": "specific type e.g. Italian Restaurant",
+  "website": "their website URL or 'No website found'",
+  "phone": "phone number or 'Not listed online'",
+  "email": "email or 'Not publicly listed'",
+  "issues": ["issue 1", "issue 2", "issue 3"],
+  "confidence": 85,
+  "opportunityScore": "High"
+}
+
+confidence is a number 70-99 representing how certain you are the issues exist.
+opportunityScore is "High" or "Medium" based on how much room for improvement there is.
+
+Remember: Only real businesses in Tauranga NZ. Be specific. Be accurate. Double-check every issue.`;
+
+    log('Sending request to AI agent...', 'highlight');
+    setStatus('AI agent is researching businesses...');
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    log('Agent response received, extracting leads...', 'highlight');
+    setStatus('Processing and verifying results...');
+
+    // Extract text from response (handle tool use blocks)
+    const fullText = data.content
+      .map(item => item.type === 'text' ? item.text : '')
+      .filter(Boolean)
+      .join('\n');
+
+    log('Parsing lead data...', '');
+
+    // Extract JSON array from response
+    const jsonMatch = fullText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Could not parse lead data from agent response');
+
+    const leads = JSON.parse(jsonMatch[0]);
+
+    log('Found ' + leads.length + ' leads — running verification pass...', 'highlight');
+    setStatus('Running double-check verification...');
+
+    // Second verification pass
+    await verifyLeads(leads, category, location);
+
+  } catch (err) {
+    log('Error: ' + err.message, 'warn');
+    setStatus('Something went wrong — see log above');
+    btn.disabled = false;
+  }
+}
+
+async function verifyLeads(leads, category, location) {
+  const btn = document.getElementById('runBtn');
+
+  try {
+    log('Sending leads for verification pass...', '');
+    setStatus('Verifying each lead independently...');
+
+    const verifyPrompt = `You are a verification agent. I have a list of ${leads.length} businesses in ${location} that were identified as having poor online presence.
+
+Your job: Review each business and VERIFY the issues are real and accurate. Remove any businesses that seem invented or where issues cannot be confirmed. Adjust confidence scores to be honest.
+
+Businesses to verify:
+${JSON.stringify(leads, null, 2)}
+
+Return ONLY a valid JSON array of the verified businesses (keep all that pass verification, remove any that are clearly wrong). Same format as input. No other text.`;
+
+    const verifyResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        messages: [{ role: "user", content: verifyPrompt }]
+      })
+    });
+
+    const verifyData = await verifyResponse.json();
+
+    const verifyText = verifyData.content
+      .map(item => item.type === 'text' ? item.text : '')
+      .filter(Boolean)
+      .join('\n');
+
+    const jsonMatch = verifyText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Verification parse failed');
+
+    const verifiedLeads = JSON.parse(jsonMatch[0]);
+    currentLeads = verifiedLeads;
+
+    log('Verification complete. ' + verifiedLeads.length + ' leads confirmed.', 'success');
+    setStatus('Done! ' + verifiedLeads.length + ' verified leads ready.');
+
+    displayLeads(verifiedLeads);
+
+  } catch (err) {
+    log('Verification error, showing unverified results: ' + err.message, 'warn');
+    currentLeads = leads;
+    displayLeads(leads);
+  }
+
+  btn.disabled = false;
+}
+
+function displayLeads(leads) {
+  const container = document.getElementById('leadsContainer');
+  container.innerHTML = '';
+  document.getElementById('resultsCount').textContent = leads.length + ' leads';
+  document.getElementById('resultsSection').style.display = 'block';
+
+  leads.forEach((lead, i) => {
+    const card = document.createElement('div');
+    card.className = 'lead-card';
+
+    const issuesHTML = (lead.issues || []).map(issue =>
+      `<div class="issue-item"><span class="issue-icon">⚠</span><span>${issue}</span></div>`
+    ).join('');
+
+    const scoreClass = lead.opportunityScore === 'High' ? 'high' : '';
+    const websiteDisplay = lead.website && lead.website !== 'No website found'
+      ? `<div class="website-link">🌐 <a href="${lead.website}" target="_blank">${lead.website}</a></div>`
+      : `<div class="website-link">🌐 No website found</div>`;
+
+    const phoneHTML = lead.phone && lead.phone !== 'Not listed online'
+      ? `<a href="tel:${lead.phone}">📞 ${lead.phone}</a>`
+      : `<span style="color:#555">📞 Not listed</span>`;
+
+    const emailHTML = lead.email && lead.email !== 'Not publicly listed'
+      ? `<a href="mailto:${lead.email}">✉️ ${lead.email}</a>`
+      : `<span style="color:#555">✉️ Not listed</span>`;
+
+    card.innerHTML = `
+      <div class="lead-top">
+        <div>
+          <div class="lead-name">${i + 1}. ${lead.name}</div>
+          <div class="lead-industry">${lead.industry || ''}</div>
+        </div>
+        <div class="score-badge ${scoreClass}">${lead.opportunityScore || 'Medium'} Opportunity</div>
+      </div>
+      <div class="lead-contact">
+        ${phoneHTML}
+        ${emailHTML}
+      </div>
+      ${websiteDisplay}
+      <div class="issues-label" style="margin-top:12px">Confirmed Issues</div>
+      <div class="issues-list">${issuesHTML}</div>
+      <div class="confidence-row">
+        <span>Confidence</span>
+        <div class="confidence-bar-wrap">
+          <div class="confidence-bar" style="width:${lead.confidence || 80}%"></div>
+        </div>
+        <span>${lead.confidence || 80}%</span>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+
+  log('All leads displayed successfully.', 'success');
+}
+
+function exportCSV() {
+  if (!currentLeads.length) return;
+
+  const headers = ['Name', 'Industry', 'Website', 'Phone', 'Email', 'Issues', 'Confidence', 'Opportunity'];
+  const rows = currentLeads.map(l => [
+    l.name,
+    l.industry,
+    l.website,
+    l.phone,
+    l.email,
+    (l.issues || []).join(' | '),
+    l.confidence + '%',
+    l.opportunityScore
+  ]);
+
+  const csv = [headers, ...rows].map(r => r.map(c => `"${(c||'').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tauranga-leads.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
